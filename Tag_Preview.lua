@@ -7,43 +7,7 @@
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
-local tag_save_ref = Tag.save
-function Tag:save()
-  local save = tag_save_ref(self)
-
-  if self.replace_card then
-    save.replace_card_table = {
-      center_key = self.replace_card.config.center_key or 'j_joker',
-      edition = self.replace_card.edition or {},
-      eternal = self.replace_card.ability.eternal,
-      perishable = self.replace_card.ability.perishable,
-      rental = self.replace_card.ability.rental,
-    }
-  end
-
-  return save
-end
-
-local tag_load_ref = Tag.load
-function Tag:load(tag_savetable)
-  tag_load_ref(self, tag_savetable)
-
-  if tag_savetable.replace_card_table then
-    local table = tag_savetable.replace_card_table
-    local card = joker_for_tag(nil, table.center_key, nil,
-      table.edition,
-      true,
-      table.eternal,
-      table.perishable,
-      table.rental,
-      true
-    )
-
-    self.replace_card = card
-  end
-end
-
-function joker_for_tag(rarity, forced_key, key_append, edition, load_edition, eternal, perishable, rental, load_sticker)
+function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perishable, rental, load_sticker)
   local type = 'Joker'
   local center = G.P_CENTERS.j_joker
   local center_key = 'j_joker'
@@ -102,10 +66,8 @@ function joker_for_tag(rarity, forced_key, key_append, edition, load_edition, et
     end
   end
 
-  if load_edition then
-    if edition then
-      card:set_edition(edition, true, true)
-    end
+  if edition then
+    card:set_edition(edition, true, true)
   else
     local edition = poll_edition('edi' .. (key_append or '') .. G.GAME.round_resets.ante)
     card:set_edition(edition, true, true)
@@ -114,13 +76,65 @@ function joker_for_tag(rarity, forced_key, key_append, edition, load_edition, et
   return card
 end
 
+function add_card_to_tag(tag)
+  local card = nil
+  if tag.name == 'Uncommon Tag' then
+    card = joker_for_tag(0.9, nil, 'utag')
+  elseif tag.name == 'Rare Tag' then
+    card = joker_for_tag(1, nil, 'rtag')
+  elseif tag.key == 'tag_ortalab_common' then
+    card = joker_for_tag(0, nil, 'ctag')
+  else
+    card = joker_for_tag(nil, nil, 'etag', tag.config.edition)
+  end
+
+  tag.replace_card = card
+
+  return tag
+end
+
+local tag_save_ref = Tag.save
+function Tag:save()
+  local save = tag_save_ref(self)
+
+  if self.replace_card then
+    save.replace_card_table = {
+      center_key = self.replace_card.config.center_key or 'j_joker',
+      edition = self.replace_card.edition or {},
+      eternal = self.replace_card.ability.eternal,
+      perishable = self.replace_card.ability.perishable,
+      rental = self.replace_card.ability.rental,
+    }
+  end
+
+  return save
+end
+
+local tag_load_ref = Tag.load
+function Tag:load(tag_savetable)
+  tag_load_ref(self, tag_savetable)
+
+  if tag_savetable.replace_card_table then
+    local table = tag_savetable.replace_card_table
+    local card = joker_for_tag(nil, table.center_key, nil,
+      table.edition,
+      true,
+      table.eternal,
+      table.perishable,
+      table.rental,
+      true
+    )
+
+    self.replace_card = card
+  end
+end
+
 local create_UIBox_blind_tag_ref = create_UIBox_blind_tag
 function create_UIBox_blind_tag(blind_choice, run_info)
   local tag_UIBox = create_UIBox_blind_tag_ref(blind_choice, run_info)
 
   local tag = tag_UIBox.config.ref_table
-
-  if (tag.name == 'Uncommon Tag' or tag.name == 'Rare Tag' or tag.name == 'Negative Tag' or tag.name == 'Foil Tag' or tag.name == 'Holographic Tag' or tag.name == 'Polychrome Tag') then
+  if tag.config.type == 'store_joker_create' or tag.config.type == 'store_joker_modify' then
     tag = add_card_to_tag(tag)
   end
 
@@ -129,45 +143,18 @@ function create_UIBox_blind_tag(blind_choice, run_info)
   return tag_UIBox
 end
 
-function add_card_to_tag(tag)
-  local card = nil
-
-  if tag.name == 'Uncommon Tag' then
-    card = joker_for_tag(0.9, nil, 'utag')
-  elseif tag.name == 'Rare Tag' then
-    card = joker_for_tag(1, nil, 'rtag')
-  else
-    local edition = {}
-
-    if tag.name == 'Negative Tag' then
-      edition = { negative = true }
-    elseif tag.name == 'Foil Tag' then
-      edition = { foil = true }
-    elseif tag.name == 'Holographic Tag' then
-      edition = { holo = true }
-    elseif tag.name == 'Polychrome Tag' then
-      edition = { polychrome = true }
-    end
-
-    card = joker_for_tag(nil, nil, 'etag', edition, true)
-  end
-
-  tag.replace_card = card
-
-  return tag
-end
-
 local add_tag_ref = add_tag
 function add_tag(_tag)
   add_tag_ref(_tag)
 
-  if (_tag.name == 'Negative Tag' or _tag.name == 'Foil Tag' or _tag.name == 'Holographic Tag' or _tag.name == 'Polychrome Tag') then
+  if (_tag.config.edition) then
     G.tag_joker_edition_count = (G.tag_joker_edition_count or 0) + 1
   end
 end
 
 local tag_apply_to_run_ref = Tag.apply_to_run
 function Tag:apply_to_run(_context)
+  --print("Tag:apply_to_run: " .. _context.type)
   if not self.triggered and self.config.type == _context.type then
     if _context.type == 'tag_add' then
       if self.name == 'Double Tag' and _context.tag.key ~= 'tag_double' then
@@ -178,7 +165,7 @@ function Tag:apply_to_run(_context)
             G.orbital_hand = _context.tag.ability.orbital_hand
           end
           local tag = Tag(_context.tag.key)
-          if (tag.name == 'Uncommon Tag' or tag.name == 'Rare Tag' or tag.name == 'Negative Tag' or tag.name == 'Foil Tag' or tag.name == 'Holographic Tag' or tag.name == 'Polychrome Tag') then
+          if tag.config.type == 'store_joker_create' or tag.config.type == 'store_joker_modify' then
             tag = add_card_to_tag(tag)
           end
           add_tag(tag)
@@ -199,51 +186,52 @@ function Tag:apply_to_run(_context)
         perishable = nil,
         rental = nil,
       }
-      if (self.name == 'Rare Tag' or self.name == 'Uncommon Tag') then
-        if not self.replace_card then
-          self = add_card_to_tag(self)
-        end
-        card_properties.edition = self.replace_card.edition
-        card_properties.eternal = self.replace_card.ability.eternal
-        card_properties.perishable = self.replace_card.ability.perishable
-        card_properties.rental = self.replace_card.ability.rental
+      --if (self.name == 'Rare Tag' or self.name == 'Uncommon Tag' or self.key == 'tag_ortalab_anaglyphic') then
+      if not self.replace_card then
+        self = add_card_to_tag(self)
+      end
+      card_properties.edition = self.replace_card.edition
+      card_properties.eternal = self.replace_card.ability.eternal
+      card_properties.perishable = self.replace_card.ability.perishable
+      card_properties.rental = self.replace_card.ability.rental
 
-        card = create_card(nil, _context.area, nil, nil, nil, nil, self.replace_card.config.center_key, nil)
+      card = create_card(nil, _context.area, nil, nil, nil, nil, self.replace_card.config.center_key, nil)
 
-        card.edition = nil
-        card.ability.eternal = nil
-        card.ability.perishable = nil
-        card.ability.rental = nil
+      card.edition = nil
+      card.ability.eternal = nil
+      card.ability.perishable = nil
+      card.ability.rental = nil
 
-        card.ability.tag_joker = true
+      card.ability.tag_joker = true
 
-        if card_properties.eternal then
-          card:set_eternal(card_properties.eternal)
-        end
-        if card_properties.perishable then
-          card:set_perishable(card_properties.perishable)
-        end
-        if card_properties.rental then
-          card:set_rental(card_properties.rental)
-        end
-
-        create_shop_card_ui(card, 'Joker', _context.area)
-        card.states.visible = false
-        self:yep('+', self.name == 'Rare Tag' and G.C.RED or G.C.GREEN, function()
-          card:start_materialize({ self.name == 'Rare Tag' and G.C.RED or G.C.GREEN })
-          if card_properties.edition then
-            card:set_edition(card_properties.edition)
-          end
-
-          card.ability.couponed = true
-          card:set_cost()
-          G.CONTROLLER.locks[lock] = nil
-          return true
-        end)
+      if card_properties.eternal then
+        card:set_eternal(card_properties.eternal)
+      end
+      if card_properties.perishable then
+        card:set_perishable(card_properties.perishable)
+      end
+      if card_properties.rental then
+        card:set_rental(card_properties.rental)
       end
 
-      self.triggered = true
+      create_shop_card_ui(card, 'Joker', _context.area)
+      card.states.visible = false
+      self:yep('+', self.name == 'Rare Tag' and G.C.RED or G.C.GREEN, function()
+        card:start_materialize({ self.name == 'Rare Tag' and G.C.RED or G.C.GREEN })
+        if card_properties.edition then
+          card:set_edition(card_properties.edition)
+        end
 
+        card.ability.couponed = true
+        card:set_cost()
+        G.CONTROLLER.locks[lock] = noon_violet
+        return true
+      end)
+      --end
+
+      self.triggered = true
+      
+      G.CONTROLLER.locks[lock] = nil
       return card
     elseif _context.type == 'store_joker_modify' then
       local _applied = nil
@@ -262,7 +250,7 @@ function Tag:apply_to_run(_context)
           rental = nil,
         }
 
-        if (self.name == 'Foil Tag' or self.name == 'Holographic Tag' or self.name == 'Polychrome Tag' or self.name == 'Negative Tag') then
+        if self.config.edition then
           if not self.replace_card then
             self = add_card_to_tag(self)
           end
@@ -294,15 +282,7 @@ function Tag:apply_to_run(_context)
           self:yep('+', G.C.DARK_EDITION, function()
             _context.card:start_materialize({ G.C.DARK_EDITION })
 
-            if self.name == 'Foil Tag' then
-              _context.card:set_edition({ foil = true }, true)
-            elseif self.name == 'Holographic Tag' then
-              _context.card:set_edition({ holo = true }, true)
-            elseif self.name == 'Polychrome Tag' then
-              _context.card:set_edition({ polychrome = true }, true)
-            elseif self.name == 'Negative Tag' then
-              _context.card:set_edition({ negative = true }, true)
-            end
+            _context.card:set_edition(self.config.edition, true)
 
             _context.card.ability.couponed = true
             _context.card:set_cost()
@@ -314,13 +294,14 @@ function Tag:apply_to_run(_context)
           _context.card.ability.j_has_edition = nil
         end
         self.triggered = true
+        G.CONTROLLER.locks[lock] = nil
       end
-
       return _applied
     else
       tag_apply_to_run_ref(self, _context)
     end
   end
+  tag_apply_to_run_ref(self, _context)
 end
 
 local card_h_popup_ref = G.UIDEF.card_h_popup
@@ -339,8 +320,8 @@ function G.UIDEF.card_h_popup(card)
     local card_type = localize('k_' .. string.lower(AUT.card_type))
 
     if (AUT.card_type == 'Joker' or (AUT.badges and AUT.badges.force_rarity)) then
-      card_type = ({ localize('k_common'), localize('k_uncommon'), localize('k_rare'), localize('k_legendary') })
-          [AUT.card.config.center.rarity]
+      card_type = ({localize('k_common'), localize('k_uncommon'), localize('k_rare'), localize('k_legendary'), localize('k_fusion'),
+        ['cry_epic'] = 'Epic', ['cry_exotic'] = 'Exotic', ['cere_divine'] = 'Divine', ['evo'] = 'Evolved', ['poke_safari'] = 'Safari'})[AUT.card.config.center.rarity]
     end
 
     local main_right = {}
@@ -432,8 +413,7 @@ function Tag:get_uibox_table(tag_sprite)
   local tag_sprite = tag_get_uibox_table_ref(self, tag_sprite)
 
   if tag_sprite.ability_UIBox_table then
-    local name_to_check = self.name
-    if (name_to_check == 'Uncommon Tag' or name_to_check == 'Rare Tag' or name_to_check == 'Negative Tag' or name_to_check == 'Foil Tag' or name_to_check == 'Holographic Tag' or name_to_check == 'Polychrome Tag') then
+    if self.replace_card then
       local tag_ability_UIBox_table_card = nil
 
       local card = nil
@@ -466,7 +446,7 @@ local tag_generate_UI_ref = Tag.generate_UI
 function Tag:generate_UI(_size)
   local tag_sprite_tab, tag_sprite = tag_generate_UI_ref(self, _size)
 
-  -- local tag_sprite_hover_ref = tag_sprite.hover
+  local tag_sprite_hover_ref = tag_sprite.hover
 
   tag_sprite.hover = function(_self)
     if not G.CONTROLLER.dragging.target or G.CONTROLLER.using_touch then
