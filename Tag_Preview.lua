@@ -69,8 +69,8 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
   if edition then
     card:set_edition(edition, true, true)
   else
-    local edition = poll_edition('edi' .. (key_append or '') .. G.GAME.round_resets.ante)
-    card:set_edition(edition, true, true)
+    local new_edition = poll_edition('edi' .. (key_append or '') .. G.GAME.round_resets.ante)
+    card:set_edition(new_edition, true, true)
   end
 
   return card
