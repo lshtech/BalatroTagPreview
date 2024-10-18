@@ -66,9 +66,9 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
     end
   end
 
-  if G.P_CENTERS[edition] then
+  if edition and G.P_CENTERS[edition] then
     card:set_edition(edition, true, true)
-  elseif G.P_CENTERS["e_" .. edition] then
+  elseif edition and G.P_CENTERS["e_" .. edition] then
     card:set_edition("e_" .. edition, true, true)
   else
     local new_edition = poll_edition('edi' .. (key_append or '') .. G.GAME.round_resets.ante)
