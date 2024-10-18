@@ -66,8 +66,10 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
     end
   end
 
-  if edition then
+  if G.P_CENTERS[edition] then
     card:set_edition(edition, true, true)
+  elseif G.P_CENTERS["e_" .. edition] then
+    card:set_edition("e_" .. edition, true, true)
   else
     local new_edition = poll_edition('edi' .. (key_append or '') .. G.GAME.round_resets.ante)
     card:set_edition(new_edition, true, true)
@@ -282,7 +284,11 @@ function Tag:apply_to_run(_context)
           self:yep('+', G.C.DARK_EDITION, function()
             _context.card:start_materialize({ G.C.DARK_EDITION })
 
-            _context.card:set_edition(self.config.edition, true)
+            if G.P_CENTERS[self.config.edition] then
+              _context.card:set_edition(self.config.edition, true)
+            elseif G.P_CENTERS["e_" .. self.config.edition] then
+              _context.card:set_edition("e_" .. self.config.edition, true)
+            end
 
             _context.card.ability.couponed = true
             _context.card:set_cost()
