@@ -7,7 +7,7 @@
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
-function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perishable, rental, load_sticker)
+function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perishable, rental, load_sticker, legendary)
   local type = 'Joker'
   local center = G.P_CENTERS.j_joker
   local center_key = 'j_joker'
@@ -16,7 +16,7 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
     center = G.P_CENTERS[forced_key]
     type = center.set or type
   else
-    local _pool, _pool_key = get_current_pool(type, rarity, nil, key_append)
+    local _pool, _pool_key = get_current_pool(type, rarity, legendary, key_append)
     center_key = pseudorandom_element(_pool, pseudoseed(_pool_key))
     local it = 1
     while center_key == 'UNAVAILABLE' do
@@ -70,22 +70,116 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
     card:set_edition(edition, true, true)
   elseif edition and G.P_CENTERS["e_" .. edition] then
     card:set_edition("e_" .. edition, true, true)
+  elseif G.GAME.modifiers.cry_force_random_edition then
+    local cry_edition = cry_poll_random_edition()
+    card:set_edition(cry_edition, true, true)
   else
     local new_edition = poll_edition('edi' .. (key_append or '') .. G.GAME.round_resets.ante)
     card:set_edition(new_edition, true, true)
   end
-
   return card
 end
 
 function add_card_to_tag(tag)
   local card = nil
+  --  Base game tags
   if tag.name == 'Uncommon Tag' then
     card = joker_for_tag(0.9, nil, 'utag')
   elseif tag.name == 'Rare Tag' then
-    card = joker_for_tag(1, nil, 'rtag')
+    card = joker_for_tag(0.99, nil, 'rtag')
+  elseif tag.name == 'Negative Tag' then
+    card = joker_for_tag(nil, nil, 'etag', "e_negative")
+  elseif tag.name == 'Foil Tag' then
+    card = joker_for_tag(nil, nil, 'etag', "e_foil")
+  elseif tag.name == 'Holographic Tag' then
+    card = joker_for_tag(nil, nil, 'etag', "e_holo")
+  elseif tag.name == 'Polychrome Tag' then
+    card = joker_for_tag(nil, nil, 'etag', "e_polychrome")
+
+  -- Ortalab tags
   elseif tag.key == 'tag_ortalab_common' then
     card = joker_for_tag(0, nil, 'ctag')
+  elseif tag.key == 'tag_ortalab_anaglyphic' then
+    card = joker_for_tag(nil, nil, 'etag', "e_ortalab_anaglyphic")
+  elseif tag.key == 'tag_ortalab_fluorescent' then
+    card = joker_for_tag(nil, nil, 'etag', "e_ortalab_fluorescent")
+  elseif tag.key == 'tag_ortalab_greyscale' then
+    card = joker_for_tag(nil, nil, 'etag', "e_ortalab_greyscale")
+  elseif tag.key == 'tag_ortalab_overexposed' then
+    card = joker_for_tag(nil, nil, 'etag', "e_ortalab_overexposed")
+  elseif tag.key == 'tag_ortalab_soul' then
+    card = joker_for_tag(1, nil, 'etag', nil, nil, nil, nil, true)
+
+  -- Bonus Blinds
+  elseif tag.key == 'tag_bb_poly_negative' then
+    card = joker_for_tag(nil, nil, 'etag', "e_bb_bb_antichrome")
+
+  -- Bunco
+  elseif tag.key == 'tag_bunc_glitter' then
+    card = joker_for_tag(nil, nil, 'etag', "e_bunc_glitter")
+  elseif tag.key == 'tag_bunc_fluorescent' then
+    card = joker_for_tag(nil, nil, 'etag', "e_bunc_fluorescent")
+  elseif tag.key == 'tag_bunc_eternal' then
+    card = joker_for_tag(nil, nil, 'etag', nil, true)
+  elseif tag.key == 'tag_bunc_perishable' then
+    card = joker_for_tag(nil, nil, 'etag', nil, nil, true)
+  elseif tag.key == 'tag_bunc_scattering' then
+    card = joker_for_tag(nil, nil, 'etag')
+    SMODS.Stickers['bunc_scattering']:apply(card, true)
+  elseif tag.key == 'tag_bunc_hindered' then
+    card = joker_for_tag(nil, nil, 'etag')
+    SMODS.Stickers['bunc_hindered']:apply(card, true)
+  elseif tag.key == 'tag_bunc_reactive' then
+    card = joker_for_tag(nil, nil, 'etag')
+    SMODS.Stickers['bunc_reactive']:apply(card, true)
+  elseif tag.key == 'tag_bunc_rental' then
+    card = joker_for_tag(nil, nil, 'etag', nil, nil, nil, true)
+
+  -- Familiar
+  elseif tag.key == 'tag_fam_aureate' then
+    card = joker_for_tag(nil, nil, 'etag', "e_fam_aureate")
+  elseif tag.key == 'tag_fam_speckle' then
+    card = joker_for_tag(nil, nil, 'etag', "e_fam_speckle")
+  elseif tag.key == 'tag_fam_statics' then
+    card = joker_for_tag(nil, nil, 'etag', "e_fam_statics")
+
+  -- Cryptid
+  elseif tag.key == 'tag_cry_epic' then
+    card = joker_for_tag(1, nil, 'rtag', nil, nil, nil, nil, nil, nil)
+  elseif tag.key == 'tag_cry_glitched' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_glitched")
+  elseif tag.key == 'tag_cry_mosaic' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_mosaic")
+  elseif tag.key == 'tag_cry_oversat' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_oversat")
+  elseif tag.key == 'tag_cry_oversat' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_oversat")
+  elseif tag.key == 'tag_cry_glass' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_glass")
+  elseif tag.key == 'tag_cry_gold' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_gold")
+  elseif tag.key == 'tag_cry_blur' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_blur")
+  elseif tag.key == 'tag_cry_astral' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_astral")
+  elseif tag.key == 'tag_cry_m' then
+    card = joker_for_tag(nil, nil, 'etag', "e_cry_m")
+  elseif tag.key == 'tag_cry_double_m' then
+			local option = {}
+			for k, _ in pairs(Cryptid.M_jokers) do
+				if G.P_CENTERS[k] then
+					option[#option + 1] = k
+				end
+			end
+    card = joker_for_tag(nil, pseudorandom_element(option, pseudoseed("M_is_love_M_is_life")), 'etag', "e_cry_m")
+  elseif tag.key == 'tag_cry_gourmand' then
+    card = joker_for_tag(nil, pseudorandom_element(Cryptid.food, pseudoseed("cry_gourmand_tag")), 'rtag')
+  elseif tag.key == 'tag_cry_rework' then
+    card = joker_for_tag(nil, (tag.ability.rework_key or "j_scholar"), 'rtag', "e_foil")
+  elseif tag.key == 'tag_cry_schematic' then
+    card = joker_for_tag(nil, "j_brainstorm", 'etag')
+
+
   else
     card = joker_for_tag(nil, nil, 'etag', tag.config.edition)
   end
@@ -225,8 +319,12 @@ function Tag:apply_to_run(_context)
         end
 
         card.ability.couponed = true
+        local cost = card.cost * 0.5
         card:set_cost()
-        G.CONTROLLER.locks[lock] = noon_violet
+        if self.key == "tag_cry_epic" then
+          card.cost = cost
+        end
+        G.CONTROLLER.locks[lock] = nil
         return true
       end)
       --end
@@ -455,6 +553,7 @@ function Tag:generate_UI(_size)
   local tag_sprite_hover_ref = tag_sprite.hover
 
   tag_sprite.hover = function(_self)
+    --tag_sprite_hover_ref(self)
     if not G.CONTROLLER.dragging.target or G.CONTROLLER.using_touch then
       if not _self.hovering and _self.states.visible then
         _self.hovering = true
@@ -565,6 +664,27 @@ function Game:start_run(args)
   if saveTable then
     G.state_just_loaded = true
   end
+end
+
+local temp_state = nil
+local cor = Card.open
+function Card:open()
+ -- print("checking for hidden hand area")
+  temp_state = G.hand.states.visible
+  if temp_state then
+   -- G.hand.states.visible = false
+  end
+  cor(self)
+end
+
+local G_FUNCS_end_consumeable_ref=G.FUNCS.end_consumeable
+G.FUNCS.end_consumeable = function(e, delayfac)
+  G_FUNCS_end_consumeable_ref(e, delayfac)
+  if G.hand.states.visible ~= temp_state then
+   -- G.hand.states.visible = temp_state
+   -- temp_state = nil
+  end
+ -- print("clearing hidden hand area")
 end
 
 ----------------------------------------------
