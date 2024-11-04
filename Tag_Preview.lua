@@ -250,7 +250,6 @@ end
 
 local tag_apply_to_run_ref = Tag.apply_to_run
 function Tag:apply_to_run(_context)
-  --print("Tag:apply_to_run: " .. _context.type)
   if not self.triggered and self.config.type == _context.type then
     if _context.type == 'tag_add' then
       if self.name == 'Double Tag' and _context.tag.key ~= 'tag_double' then
@@ -401,11 +400,9 @@ function Tag:apply_to_run(_context)
         G.CONTROLLER.locks[lock] = nil
       end
       return _applied
-    else
-      tag_apply_to_run_ref(self, _context)
     end
   end
-  tag_apply_to_run_ref(self, _context)
+  return tag_apply_to_run_ref(self, _context)
 end
 
 local card_h_popup_ref = G.UIDEF.card_h_popup
