@@ -7,6 +7,8 @@
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
+local current_tags = {}
+
 function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perishable, rental, load_sticker, legendary)
   local type = 'Joker'
   local center = G.P_CENTERS.j_joker
@@ -228,13 +230,14 @@ end
 local create_UIBox_blind_tag_ref = create_UIBox_blind_tag
 function create_UIBox_blind_tag(blind_choice, run_info)
   local tag_UIBox = create_UIBox_blind_tag_ref(blind_choice, run_info)
-
   local tag = tag_UIBox.config.ref_table
-  if tag.config.type == 'store_joker_create' or tag.config.type == 'store_joker_modify' then
+  if (tag.config.type == 'store_joker_create' or tag.config.type == 'store_joker_modify') and (not current_tags[blind_choice] or current_tags[blind_choice].key ~= tag.key) then
     tag = add_card_to_tag(tag)
+    tag_UIBox.config.ref_table = tag
+    current_tags[blind_choice] = tag
+  elseif (tag.config.type == 'store_joker_create' or tag.config.type == 'store_joker_modify') and current_tags[blind_choice].key == tag.key then
+    tag_UIBox.config.ref_table = current_tags[blind_choice]
   end
-
-  tag_UIBox.config.ref_table = tag
 
   return tag_UIBox
 end
@@ -245,6 +248,14 @@ function add_tag(_tag)
 
   if (_tag.config.edition) then
     G.tag_joker_edition_count = (G.tag_joker_edition_count or 0) + 1
+  end
+end
+
+local reset_blinds_ref = reset_blinds
+function reset_blinds()
+  reset_blinds_ref()
+  if G.GAME.round_resets.blind_states.Boss == 'Defeated' then
+    current_tags = {}
   end
 end
 
@@ -514,6 +525,9 @@ function Tag:get_uibox_table(tag_sprite)
   local tag_sprite = tag_get_uibox_table_ref(self, tag_sprite)
 
   if tag_sprite.ability_UIBox_table then
+    if (self.config.type == 'store_joker_create' or self.config.type == 'store_joker_modify') and not self.replace_card and current_tags[self.ability.blind_type] and current_tags[self.ability.blind_type].key == self.key then
+      self.replace_card = current_tags[self.ability.blind_type].replace_card
+    end
     if self.replace_card then
       local tag_ability_UIBox_table_card = nil
 
@@ -666,7 +680,6 @@ end
 local temp_state = nil
 local cor = Card.open
 function Card:open()
- -- print("checking for hidden hand area")
   temp_state = G.hand.states.visible
   if temp_state then
    -- G.hand.states.visible = false
@@ -681,7 +694,6 @@ G.FUNCS.end_consumeable = function(e, delayfac)
    -- G.hand.states.visible = temp_state
    -- temp_state = nil
   end
- -- print("clearing hidden hand area")
 end
 
 ----------------------------------------------
