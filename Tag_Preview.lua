@@ -8,7 +8,7 @@
 ------------MOD CODE -------------------------
 
 local current_tags = {}
-
+local obj_type = type
 function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perishable, rental, load_sticker, legendary)
   local type = 'Joker'
   local center = G.P_CENTERS.j_joker
@@ -19,11 +19,11 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
     type = center.set or type
   else
     local _pool, _pool_key = get_current_pool(type, rarity, legendary, key_append)
-    center_key = pseudorandom_element(_pool, pseudoseed(_pool_key))
+    center_key = tostring(pseudorandom_element(_pool, pseudoseed(_pool_key)))
     local it = 1
     while center_key == 'UNAVAILABLE' do
       it = it + 1
-      center_key = pseudorandom_element(_pool, pseudoseed(_pool_key .. '_resample' .. it))
+      center_key = tostring(pseudorandom_element(_pool, pseudoseed(_pool_key .. '_resample' .. it)))
     end
 
     center = G.P_CENTERS[center_key]
@@ -67,9 +67,13 @@ function joker_for_tag(rarity, forced_key, key_append, edition, eternal, perisha
       card:set_rental(true)
     end
   end
-
+  
   if edition and G.P_CENTERS[edition] then
     card:set_edition(edition, true, true)
+  elseif edition and obj_type(edition) == 'table' then
+    if edition.key then
+      card:set_edition(edition.key, true, true)
+    end
   elseif edition and G.P_CENTERS["e_" .. edition] then
     card:set_edition("e_" .. edition, true, true)
   elseif G.GAME.modifiers.cry_force_random_edition then
@@ -616,7 +620,7 @@ function Tag:generate_UI(_size)
 
   return tag_sprite_tab, tag_sprite
 end
-
+--[[
 local create_card_for_shop_ref = create_card_for_shop
 function create_card_for_shop(area)
   if not (area == G.shop_jokers and G.SETTINGS.tutorial_progress and G.SETTINGS.tutorial_progress.forced_shop and G.SETTINGS.tutorial_progress.forced_shop[#G.SETTINGS.tutorial_progress.forced_shop]) then
@@ -662,7 +666,7 @@ function create_card_for_shop(area)
     end
   end
   return create_card_for_shop_ref(area)
-end
+end]]
 
 local game_start_run_ref = Game.start_run
 function Game:start_run(args)
